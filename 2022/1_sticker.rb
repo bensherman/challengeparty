@@ -1,18 +1,20 @@
 #!/usr/bin env ruby
 
 require "byebug"
+require "vigenere"
+require "set"
 
-QBERT = %w[
-T
-XF
-PWD
-NVQM
-BPOQF
-AENRVQ
-LJSQTUW
-FJHLCWMB
-HZUMXYEQN
-XBMGQTLKTF
+QBERT = [
+"         T",
+"        X F",
+"       P W D",
+"      N V Q M",
+"     B P O Q F",
+"    A E N R V Q",
+"   L J S Q T U W",
+"  F J H L C W M B",
+" H Z U M X Y E Q N",
+"X B M G Q T L K T F",
 ]
 
 # QBERT is an array, input from puzzle.jpg
@@ -586,42 +588,42 @@ TFDMFQWBNF]
 #   puts
 # end
 
-def rot_x(x, string)
-  # quick and dirty, assume all caps A-Z
-  # "A".ord == 65
-  new_string = ""
-  string.each_char do |char|
-    new_string << (char.ord - 65 + x).modulo(26).+(65).chr
-  end
-  new_string
-end
+# def rot_x(x, string)
+#   # quick and dirty, assume all caps A-Z
+#   # "A".ord == 65
+#   new_string = ""
+#   string.each_char do |char|
+#     new_string << (char.ord - 65 + x).modulo(26).+(65).chr
+#   end
+#   new_string
+# end
 
-26.times do |x|
-  puts x
-  QBERT.each do |word|
-    puts rot_x(x, word)
-  end
-end
+# # 26.times do |x|
+# #   puts x
+# #   QBERT.each do |word|
+# #     puts rot_x(x, word)
+# #   end
+# # end
 
 
 
-# do I spot "QED fuck fb"
-rot_11 = %w[
-I
-MU
-ELS
-CKFB
-QEDFU
-PTCGKF
-AYHFIJL
-UYWARLBQ
-WOJBMNTFC
-MQBVFIAZIU
-]
+# # do I spot "QED fuck fb"
+# rot_11 = %w[
+# I
+# MU
+# ELS
+# CKFB
+# QEDFU
+# PTCGKF
+# AYHFIJL
+# UYWARLBQ
+# WOJBMNTFC
+# MQBVFIAZIU
+# ]
 
-# puts rot_11.reverse.join
-# => MQBVFIAZIUWOJBMNTFCUYWALRBQAYHFIJLPTCGKFQEDFUCKFBELSMUI
-joined = QBERT.join
+# # puts rot_11.reverse.join
+# # => MQBVFIAZIUWOJBMNTFCUYWALRBQAYHFIJLPTCGKFQEDFUCKFBELSMUI
+# joined = QBERT.join
 # puts joined
 # puts joined.split(//).uniq.count
 # => 25
@@ -645,24 +647,114 @@ joined = QBERT.join
 # thinking about later levels in the original game, qbert could go up or down. and hit the same squres multiple times.
 # what if rotate the puzzle and have qbert be on top
 
-QBERT_60_CCW = %w[
-  F
-  NT
-  BQK
-  WMEL
-  QUWYT
-  FVTCXQ
-  MQRQLMG
-  DQONSHUM
-  FWVPEJJZB
-  TXPNBALFHX
-]
+# QBERT_60_CCW = %w[
+#   F
+#   NT
+#   BQK
+#   WMEL
+#   QUWYT
+#   FVTCXQ
+#   MQRQLMG
+#   DQONSHUM
+#   FWVPEJJZB
+#   TXPNBALFHX
+# ]
 # eyeball that the inputs match
 # puts QBERT.join.split(//).sort.join == QBERT_60_CCW.join.split(//).sort.join
 # puts QBERT_60_CCW
 # qbert_jump(QBERT_60_CCW.clone, "")
-puts QBERT.join
-puts QBERT_60_CCW.join
+# puts QBERT.map {|s| s.tr " ", ""}.join
 
-def translate(string)
-  string.each_char do |char|
+def rot_tr(s, i=1)
+  i.times do
+    s = s[1..] + s[0]
+  end
+  s
+end
+
+CAPS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# (0..CAPS.size).each do |i|
+#   puts QBERT.map{ |s| s.tr CAPS, rot_tr(CAPS, i)}
+#   puts
+# end
+
+puts "original: \n#{QBERT.join("\n")}"
+no_spaces = QBERT.map {|s| s.tr " ", ""}.join
+puts "no spaces: #{no_spaces}"
+first_chars = QBERT.map {|s| s.gsub(/\s+/, "")[0] }.join
+puts "first_chars: #{first_chars}"
+last_chars = QBERT.map {|s| s.gsub(/\s+/, "")[-1] }.join
+puts "last_chars: #{last_chars}"
+last_line = QBERT.last.gsub(/\s+/, "")
+puts "last_line: #{last_line}"
+
+inputs = [
+first_chars,
+last_chars,
+last_line,
+]
+
+	# It’s just a cipher with a well known key stream implied by the shape
+	# 😊 well maybe not quite that “well known” but the shape is the key
+
+keys = File.readlines("wordlist", chomp: true).to_set
+# out = File.open("output", "w")
+# keys.each do |key|
+#   inputs.each do |input|
+#     out.write Vigenere.decode(key, input)
+#     out.write "\n"
+#   end
+# end
+# output = File.readlines("output", chomp: true)
+# i = 0
+# keys.each do |key|
+#   key.size < 6 ? next : nil
+#   output.each do |line|
+#     line.include?(key) ? puts("line: #{line}                    key: #{key}") : nil
+#   end
+#   i += 1
+#   i % 100 == 0 ? (puts("#{i}: #{key}"); $stdout.flush) : nil
+# end
+
+# [.../code/challengeparty/2022] (2022|*|U)% grep key: matches
+# line: SBLIMPSJJM                    key: BLIMPS
+# line: UBOVINERQF                    key: BOVINE
+# line: UBOVINERBC                    key: BOVINE
+# line: QDACTYLEZM                    key: DACTYL
+# line: QDACTYLMDU                    key: DACTYL
+# line: QDACTYLMDU                    key: DACTYL
+# line: QDACTYLMDF                    key: DACTYL
+# line: QDACTYLMZK                    key: DACTYL
+# line: QDACTYLMZJ                    key: DACTYL
+# line: QDACTYLMZJ                    key: DACTYL
+# line: QDACTYLMTG                    key: DACTYL
+# line: QDACTYLMTG                    key: DACTYL
+# line: INVEIGHVFO                    key: INVEIGH
+# line: LENGTHJYZE                    key: LENGTH
+# line: RYDTMILDLY                    key: MILDLY
+# line: BQPARITYHK                    key: PARITY
+# line: PORCINECGK                    key: PORCINE
+# line: PORCINECGZ                    key: PORCINE
+# line: STINGSYZGT                    key: STINGS
+# line: STINGSXLQW                    key: STINGS
+# line: STINGSXLQX                    key: STINGS
+# line: STINGSXLQX                    key: STINGS
+# line: STINGSXLQP                    key: STINGS
+# line: STINGSXLQP                    key: STINGS
+# line: STINGSXLQP                    key: STINGS
+# line: STINGSXLQF                    key: STINGS
+# line: VBZTWILITS                    key: TWILIT
+# line: SNBVIRAGOR                    key: VIRAGO
+
+inputs = [
+  no_spaces,
+  first_chars,
+  last_chars,
+  last_line,
+]
+
+inputs.each do |input|
+  out = Vigenere.decode("PARITY", input)
+  puts "input: #{input}"
+  puts out
+end
