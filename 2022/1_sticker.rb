@@ -2,20 +2,185 @@
 
 require "byebug"
 require "vigenere"
-require "set"
+require "pp"
+
+def triangle_output(s)
+  triangled = []
+  s.each_with_index do |row, i|
+    triangled << " " * (s.size - i - 1)
+    row.each_char do |c|
+      triangled[i] << c + " "
+    end
+    triangled[i] << "\n"
+  end
+  triangled
+end
+
+def s_to_tri(s)
+  # turns string of 55 chars into a triangle of 10 rows
+  s.size != 55 ? raise("string must be 55 chars long") : nil
+  tri = []
+  10.times do |i|
+    tri.push ""
+    tri[i] << s[0..i]
+    s = s[i+1..-1]
+  end
+  tri
+end
+
+def unroll_right(s)
+  s.size != 55 ? raise("string must be 55 chars long") : nil
+  tri = s_to_tri(s)
+  tri.reverse!
+  new_tri = ""
+  circle = 0
+  while tri.size > 0
+    new_tri << tri.shift
+    tri.each_with_index do |row, i|
+      new_tri += row[-1]
+      tri[i] = row[0..-2]
+    end
+    tri.pop
+    tri.reverse!
+    tri.each_with_index do |row, i|
+      new_tri += row[0]
+      tri[i] = row[1..]
+    end
+    popped_row = tri.shift
+    tri.reverse!
+    circle += 1
+  end
+  new_tri
+end
+
+def unroll_left(s)
+  mirror = s_to_tri(s).map { |row| row.reverse }
+  unroll_right(mirror.join)
+end
+
+def rotate_tri(ten_array)
+  rotated = []
+  10.times do
+    rotated << ""
+  end
+
+  10.times do |i|
+    ten_array.each do |row|
+      row[i] ? rotated[i] << row[i] : rotated[i] << ""
+    end
+  end
+  rotated.reverse
+end
+
 
 QBERT = [
-"         T",
-"        X F",
-"       P W D",
-"      N V Q M",
-"     B P O Q F",
-"    A E N R V Q",
-"   L J S Q T U W",
-"  F J H L C W M B",
-" H Z U M X Y E Q N",
-"X B M G Q T L K T F",
+"T",
+"XF",
+"PWD",
+"NVQM",
+"BPOQF",
+"AENRVQ",
+"LJSQTUW",
+"FJHLCWMB",
+"HZUMXYEQN",
+"XBMGQTLKTF"
 ]
+
+
+qbert_ccw = rotate_tri(QBERT)
+qbert_cw = rotate_tri(qbert_ccw)
+
+def get_perms(s)
+  s_ccw = rotate_tri(s)
+  s_cw = rotate_tri(s_ccw)
+  {
+  main: s.join,
+  ccw: s_ccw.join,
+  cw: s_cw.join,
+  unrolled_right_ccw: unroll_right(s_ccw.join),
+  unrolled_right_cw:unroll_right(s_cw.join),
+  unrolled_right: unroll_right(s.join),
+  unrolled_left_ccw: unroll_left(s_ccw.join),
+  unrolled_left_cw: unroll_left(s_cw.join),
+  unrolled_left: unroll_left(s.join)
+}
+end
+
+def print_perms(s)
+  perms = get_perms(s)
+  put perms.each_pair.map { |k, v| "#{v} # #{k}" }.join("\n")
+end
+
+puts triangle_output(QBERT)
+# puts
+# perms = get_perms(QBERT)
+# puts perms.each_pair.map { |k, v| "#{v} # #{k}" }.join("\n")
+
+# OEIS - https://oeis.org/A007318
+pascals_triangle =
+[
+1,
+1, 1,
+1, 2, 1,
+1, 3, 3, 1,
+1, 4, 6, 4, 1,
+1, 5, 10, 10, 5, 1,
+1, 6, 15, 20, 15, 6, 1,
+1, 7, 21, 35, 35, 21, 7, 1,
+1, 8, 28, 56, 70, 56, 28, 8, 1,
+1, 9, 36, 84, 126, 126, 84, 36, 9, 1,
+1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1
+]
+
+qbert = QBERT.join
+plaintext=""
+
+qbert.size.times do |i|
+  a = qbert[i].ord
+  b = pascals_triangle[i]
+  c = a + b
+  begin
+    d = c.chr
+  rescue
+    d = "."
+  end
+  puts "#{a}\t#{b.chr}\t#{c}\t#{d}"
+  plaintext << d
+end
+puts triangle_output(s_to_tri(plaintext))
+return
+
+# puts QBERT
+# puts qbert_ccw
+# puts qbert_cw
+
+def show_me(ciphertexts, keys)
+  ciphertexts.each do |ciphertext|
+    keys.each do |key|
+      plaintext = Vigenere.decode(key, ciphertext)
+      puts "Key: #{key}, Ciphertext: #{ciphertext}"
+      puts "Plaintext: #{plaintext}"
+      puts "as triangle:\n#{triangle_output(s_to_tri(plaintext)).join}\n"
+    end
+  end
+end
+
+ciphertexts = [QBERT.join, qbert_ccw.join, qbert_cw.join]
+keys = %w[
+QBERT
+HTTP
+BITLY
+TINYURL
+CAEZAR
+CHALLENGE
+CHALLENGEPARTY
+HEXAGON
+TRIANGLE
+DEFCON
+]
+
+show_me(ciphertexts, keys)
+return
 
 # QBERT is an array, input from puzzle.jpg
 # in qbert, one can only go down left or down right.
@@ -689,22 +854,19 @@ last_line = QBERT.last.gsub(/\s+/, "")
 puts "last_line: #{last_line}"
 
 inputs = [
-first_chars,
-last_chars,
-last_line,
+
 ]
 
-	# It’s just a cipher with a well known key stream implied by the shape
-	# 😊 well maybe not quite that “well known” but the shape is the key
+# It’s just a cipher with a well known key stream implied by the shape
+# 😊 well maybe not quite that “well known” but the shape is the key
 
 keys = File.readlines("wordlist", chomp: true).to_set
-# out = File.open("output", "w")
-# keys.each do |key|
-#   inputs.each do |input|
-#     out.write Vigenere.decode(key, input)
-#     out.write "\n"
-#   end
-# end
+out = File.open("output3", "w")
+keys.each do |key|
+  inputs.each do |input|
+    out.write "input: #{input}     key: #{key}    output: #{Vigenere.decode(key, input)}\n"
+  end
+end
 # output = File.readlines("output", chomp: true)
 # i = 0
 # keys.each do |key|
@@ -747,14 +909,29 @@ keys = File.readlines("wordlist", chomp: true).to_set
 # line: SNBVIRAGOR                    key: VIRAGO
 
 inputs = [
-  no_spaces,
-  first_chars,
-  last_chars,
-  last_line,
+no_spaces,
+first_chars,
+first_chars.reverse,
+last_chars,
+last_chars.reverse,
+last_line,
+last_line.reverse,
 ]
 
-inputs.each do |input|
-  out = Vigenere.decode("PARITY", input)
-  puts "input: #{input}"
-  puts out
+puts "testing my ideas of keys"
+my_keys = %w[
+QBERT
+HTTP
+BITLY
+TINYURL
+CAEZAR
+CHALLENGE
+CHALLENGEPARTY
+]
+my_keys.each do |key|
+
+  inputs.each do |input|
+    out = Vigenere.decode(key, input)
+    puts "input: #{input}, key: #{key}, output: #{out}"
+  end
 end
