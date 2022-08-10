@@ -4,7 +4,16 @@ require "byebug"
 require "vigenere"
 require "pp"
 
-fib = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+# https://www.rosettacode.org/wiki/Fibonacci_sequence#Recursive_with_Memoization_4
+fib = Hash.new do |f, n|
+  f[n] = if n <= -2
+           (-1)**(n + 1) * f[n.abs]
+         elsif n <= 1
+           n.abs
+         else
+           f[n - 1] + f[n - 2]
+         end
+end
 
 def triangle_output(s)
   triangled = []
@@ -28,6 +37,55 @@ def s_to_tri(s)
     s = s[i+1..-1]
   end
   tri
+end
+
+puzzle = [
+"T",
+"XF",
+"PWD",
+"NVQM",
+"BPOQF",
+"AENRVQ",
+"LJSQTUW",
+"FJHLCWMB",
+"HZUMXYEQN",
+"XBMGQTLKTF"
+]
+
+ciphertext = puzzle.join
+plaintext=""
+
+ciphertext.size.times do |i|
+  a = ciphertext[i].ord - "A".ord
+  b = fib[i]
+  c = (a - b) % 26
+  d = (c + "A".ord).chr
+  puts "#{d}\t#{a}\t#{c}\t\t#{b}"
+  plaintext << d
+end
+puts triangle_output(s_to_tri(plaintext))
+puts plaintext
+
+# gets us to
+# "TWENTYFIVEYEARSOFCHALLENGEVISITWZEROZEROWZEROZERODOTNET"
+# https://w00w00.net
+
+return
+
+### Everything below here is other attempts at solving the puzzle ###
+### There is a bunch of interesting translations for this kind of matrix, so I am leaving them here.
+### Thanks for looking at my github history. :)
+
+def triangle_output(s)
+  triangled = []
+  s.each_with_index do |row, i|
+    triangled << " " * (s.size - i - 1)
+    row.each_char do |c|
+      triangled[i] << c + " "
+    end
+    triangled[i] << "\n"
+  end
+  triangled
 end
 
 def unroll_right(s)
@@ -114,10 +172,6 @@ def print_perms(s)
 end
 
 puts triangle_output(QBERT)
-# puts
-# perms = get_perms(QBERT)
-# puts perms.each_pair.map { |k, v| "#{v} # #{k}" }.join("\n")
-
 # OEIS - https://oeis.org/A007318
 pascals_triangle =
 [
@@ -135,43 +189,6 @@ pascals_triangle =
 1, 11, 55, 165, 330, 462, 462, 330, 165, 55, 11, 1
 ]
 
-# plaintext = ""
-# QBERT.each_with_index do |row, i|
-#   key = fib[i]
-
-#   puts i, row, key
-
-#   row.each_char do |c|
-#     begin
-#     plaintext << (c.ord - key).chr
-#     rescue
-#       plaintext << "."
-#     end
-#   end
-# end
-
-# puts triangle_output s_to_tri(plaintext)
-
-
-# return
-
-qbert = QBERT.join
-plaintext=""
-
-qbert.size.times do |i|
-  a = qbert[i].ord - "A".ord
-  b = fib[i]
-  c = (a - b) % 26
-  d = (c + "A".ord).chr
-  puts "#{a}\t#{b}\t#{c}\t#{d}"
-  plaintext << d
-end
-puts triangle_output(s_to_tri(plaintext))
-return
-
-# puts QBERT
-# puts qbert_ccw
-# puts qbert_cw
 
 def show_me(ciphertexts, keys)
   ciphertexts.each do |ciphertext|
@@ -871,13 +888,6 @@ last_chars = QBERT.map {|s| s.gsub(/\s+/, "")[-1] }.join
 puts "last_chars: #{last_chars}"
 last_line = QBERT.last.gsub(/\s+/, "")
 puts "last_line: #{last_line}"
-
-inputs = [
-
-]
-
-# It’s just a cipher with a well known key stream implied by the shape
-# 😊 well maybe not quite that “well known” but the shape is the key
 
 keys = File.readlines("wordlist", chomp: true).to_set
 out = File.open("output3", "w")
